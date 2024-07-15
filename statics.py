@@ -85,3 +85,24 @@ INDONESIAN_QUESTION_WORDS = {
     "How": "bagaimana",
     "yn": "apakah"
 }
+
+INDONESIAN_SUDAH_ERROR_WORDS = {
+    "準備": "siap",
+    "開始": "dimulai",
+    "打掃": "membersihkan",
+    "開始": "dimulai",
+    "吃飽": "kenyang"
+}
+
+INDONESIAN_MINUM_UNDERCASE = {
+    "DRINK": "DRINK",
+    "湯" : "sup"
+}
+
+
+INDONESIAN_MINUM_UNDERCASE = {
+    "甜": "manis",
+    "好吃": "enak",
+    "討厭": "benci",
+    "好玩": "menyenangkan"
+}

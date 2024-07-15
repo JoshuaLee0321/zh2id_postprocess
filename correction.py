@@ -1,4 +1,5 @@
 import re
+# from scripts.statics import *
 from statics import *
 
 class IndoSyntaxPostCorrection():
@@ -13,16 +14,67 @@ class IndoSyntaxPostCorrection():
         # 再修正再問題中的分類
         
         # 修正直述句
-        idseg = self.fix_polite_type(zhseg, idseg)
-        idseg = self.fix_negation_type(zhseg, idseg)
-        idseg = self.fix_state_sentence_type(zhseg, idseg)
-        idseg = self.fix_conjunection_type(zhseg, idseg)
-        idseg = self.fix_predicate_type(zhseg, idseg)
-        idseg = self.fix_question_type(zhseg, idseg)
-        idseg = self.fix_question_case_by_case(zhseg, idseg)
-        idseg = self.fix_time_type(zhseg, idseg)
-        return " ".join(idseg)
+        try:
+            idseg = [x.replace("Anda", "anda").
+                     replace("aku", "saya").
+                     replace("Aku", "saya").
+                     replace("Apa", "apa")
+                     for x in idseg]
+            
+            idseg = self.fix_impolite_type(idseg)
+            idseg = self.fix_polite_type(zhseg, idseg)
+            idseg = self.fix_negation_type(zhseg, idseg)
+            idseg = self.fix_state_sentence_type(zhseg, idseg)
+            idseg = self.fix_conjunection_type(zhseg, idseg)
+            idseg = self.fix_predicate_type(zhseg, idseg)
+            idseg = self.fix_question_type(zhseg, idseg)
+            idseg = self.fix_question_case_by_case(zhseg, idseg)
+            idseg = self.fix_time_type(zhseg, idseg)
+            # 整理用
+            for i in range(len(idseg)):
+                if idseg[i] == "&quot;":
+                    idseg[i] = '\"'
+                if idseg[i] == "&apos;":
+                    idseg[i] = "\'"
+       
+            if idseg[-1] == ",":
+                idseg = idseg[:-1]
+            if idseg[-1] == "\"":
+                idseg = idseg[:-1]
+            if idseg[-1] == ";":
+                idseg = idseg[:-1]
+        except Exception as e:
+            print(e)
+            return ""
         
+        result = " ".join(idseg).strip()
+        return result
+    
+    def fix_special_and_replica_type(self, zhseg: list, idseg: list) -> list:
+        ref: str = "".join(zhseg)
+        result: str = " ".join(idseg)
+        
+        if "老闆娘" in ref:
+            if "bos bos" in result:
+                result = result.replace("bos bos", "bos")
+            if "bos" in result and "ibu bos" not in result:
+                result = result.replace("bos")
+        
+        if "apakah bisakah" in result:
+            result = result.replace("apakah bisakah", "apakah")
+        return result.split(" ")
+        
+    def fix_impolite_type(self, idseg: list) -> list:
+        
+        for i in range(len(idseg)):
+            if idseg[i] == "aku":
+                idseg[i] = "saya"
+            if idseg[i] == "kau":
+                idseg[i] = "anda"
+           # add more implite rules here...    
+
+        return idseg
+    
     def fix_polite_type(self, zhseg: list, idseg: list) -> list:
         ref: str = "".join(zhseg)
         result: str = " ".join(idseg)
@@ -73,6 +125,7 @@ class IndoSyntaxPostCorrection():
             result = result.replace("nggak", 'tidak')
             result = result.replace(" gak ", ' tidak ')
             result = result.replace(" ga ", ' tidak ')
+            result = result.replace(" tak ", ' tidak ')
         
         # elif re.search("今天")    
         return result.split(" ")
@@ -125,7 +178,7 @@ class IndoSyntaxPostCorrection():
             # 代表在中間
             if "bagi" in result and "bagi" != result[:4]:
                 resList = result.split("bagi")
-                result = "bagi" + resList[1].strip() + " , " + resList[0].strip()
+                result = "bagi " + resList[1].strip() + " , " + resList[0].strip()
             elif "bagi" not in result:
                 result = "bagi " + result
                 
@@ -173,7 +226,7 @@ class IndoSyntaxPostCorrection():
         # 以至於
         elif "以至於" in ref:
             if " hingga " in result:
-                result = result.replace(" hingga ", "sehingga")
+                result = result.replace(" hingga ", " sehingga ")
         
         # 要是 XX(原因)，就 XX(結果)
         elif re.search("要是.*", ref):
@@ -211,13 +264,13 @@ class IndoSyntaxPostCorrection():
         elif "請" in ref:
             if "tolong" in result:
                 result = result.replace("tolong", "silahkan")
-            elif "tolong" not in result and "silahkan" not in result:
+            elif "tolong" not in result and "silahkan" not in result and "silakan" not in result:
                 result = "silahkan " + result
         # 麻煩你 ...
         elif "麻煩你" in ref or "麻煩" == ref[:2]:
             if "silahkan" in result:
                 result = result.replace("silahkan", "tolong")
-            elif "tolong" not in result and "silahkan" not in result:
+            elif "tolong" not in result and "silahkan" not in result and "silakan" not in result:
                 result = "tolong " + result
                 
         return result.split(" ")  
@@ -264,7 +317,7 @@ class IndoSyntaxPostCorrection():
 
 
         
-        return result
+        return result.split(' ')
 
     def fix_question_case_by_case(self, zhseg: list, idseg: list) -> list:
         
@@ -272,6 +325,8 @@ class IndoSyntaxPostCorrection():
         ref: str = "".join(zhseg)
         # 處理 在哪裡的問題
         if "在哪裡" in ref:
+            if "Dimana" in result:
+                result = result.replace("Dimana", "di mana")
             if "mana" in result and "dimana" not in result and "di mana" not in result:
                 result = result.replace("mana", "di mana")
             if "di mana" not in result and "dimana" not in result:
@@ -279,6 +334,8 @@ class IndoSyntaxPostCorrection():
                 
         # 處理 "為甚麼"
         elif "為甚麼" in ref or "為什麼" in ref:
+            if "kenapa" in result:
+                result = result.replace("kenapa", "mengapa")
             if "mengapa" not in result:
                 if "apa" in result:
                     result = result.replace("apa", "mengapa")
@@ -302,12 +359,18 @@ class IndoSyntaxPostCorrection():
                     
         # 處理問大小
         elif "什麼時候" in ref or "幾點" in ref:
-            if "berapa" not in result:
+            if "berapa" not in result and "kapan" not in result:
                 result = "berapa " + result
             if "berapa" in result:
-                if "panjang" not in result:
+                if "panjang" not in result and "jam berapa" not in result:
                     result = result.replace("berapa", "jam berapa")
-        
+        # 處理 何時
+        elif "何時" in ref or "幾時" in ref:
+            if "jam berapa" not in result and "kapan" not in result:
+                result = "jam berapa " + result
+            elif "jam" in result and "jam berapa" not in result and "berapa" not in result:
+                result = result.replace("jam", "jam berapa")
+                
         return result.split(" ")
     
     def fix_time_type(self, zhseg: list, idseg: list) -> list:
@@ -318,11 +381,226 @@ class IndoSyntaxPostCorrection():
             result = result.replace("hari", "", 1)
     
         return result.split(" ")
+
+class IndoSyntaxPostCorrectionPlus(IndoSyntaxPostCorrection):
+    '''
+    第二度更改
+    '''
+    def __init__(self) -> None:
+        pass
+    def correct_over_translation(self, zhstr: str, idseg: list) -> list:
+        if "我們家住" in zhstr:
+            if idseg[0] == "rumah":
+                idseg[0] = ""
+            
+        if "TIME" in zhstr:
+            if "這TIME" in zhstr:
+                pass
+            elif idseg[-1] == "ini" or idseg[-1] == "hari" and idseg[-2] == "TIME":
+                idseg = idseg[:-1]
         
-if __name__ == "__main__":
-    correct = IndoSyntaxPostCorrection()
-    zhseg = " 不好意思 ， 今天 星期幾".split()
-    idseg = "segelas air ini sangat besar".split()
+        if "這" not in zhstr and "這個" not in zhstr:
+            idseg = " ".join(idseg).replace("ini", "itu").replace("  ", " ").strip().split()
+            if "那" in zhstr or "那個" in zhstr:
+                pass
+            else:
+                idseg = " ".join(idseg).replace("itu", "").replace("  ", " ").strip().split()
+
+        if "那" not in zhstr and "那個" not in zhstr:
+            idseg = " ".join(idseg).replace("itu", "ini").replace("  ", " ").strip().split()
+            if "這" in zhstr or "這個" in zhstr:
+                pass
+            else:
+                idseg = " ".join(idseg).replace("ini", "").replace("  ", " ").strip().split()
+        
+        if re.search("奶奶.*常常", zhstr):
+            idseg = [x.replace("terbangun", "bangun") for x in idseg]
+        
+        if "回來" == zhstr[-2:]:
+            idstr = " ".join(idseg)
+            if "dan kembali" in idstr or "kembali" in idstr:
+                idseg = idstr.replace("dan kembali", "").replace("kembali", "").replace("  ", "").strip().split()
+        
+        
+        if re.search("洗一下.*[手|腳|身體|頭]。", zhstr):
+            if idseg[-2] == "anda":
+                idseg[-2] = ""
+        if re.search("洗一下.*[手|腳|身體|頭]", zhstr):
+            if idseg[-1] == "anda":
+                idseg[-1] = ""    
+
+        return " ".join(idseg).replace("  ", "").strip().split()
     
+    def correct_under_translation(self, zhstr: str, idseg: list) -> list:
+        
+        if re.search("他是.*", zhstr):
+            idstr = " ".join(idseg)
+            if "dia adalah" not in idstr:
+                idseg = idstr.replace("dia","dia adalah",1).split()
+            
+        if re.search("我是.*", zhstr):
+            idstr = " ".join(idseg)
+            if "saya adalah" not in idstr:
+                idseg = idstr.replace("saya","saya adalah",1).split()
+        
+        ## pada 介係詞少翻譯問題
+        if "DATE" in zhstr:
+            idstr = " ".join(idseg)
+            if "pada DATE" not in idstr:
+                idseg = idstr.replace("DATE","pada DATE",1).split()
+                
+        if "TIME" in zhstr:
+            idstr = " ".join(idseg)
+            if "pada TIME" not in idstr:
+                idseg = idstr.replace("TIME","pada TIME",1).split()
+                
+                
+        ## sudah 少譯問題
+        if re.search("[我|你|他].*了", zhstr):
+            idstr = " ".join(idseg)
+            if "saya sudah" not in idstr:
+                idseg = idstr.replace("saya","saya sudah",1).split()
+            elif "dia sudah" not in idstr:
+                idseg = idstr.replace("dia","dia sudah",1).split()
+            elif "anda sudah" not in idstr:
+                idseg = idstr.replace("anda","saya sudah",1).split()
+        sudahReString = "|".join(INDONESIAN_SUDAH_ERROR_WORDS.keys())
+        matches = f".*[{sudahReString}].*了"
+
+        if re.search("那個.*了", zhstr):
+            idstr = " ".join(idseg)
+            if "itu sudah" not in idstr:
+                idseg = idstr.replace("itu","itu sudah").split()
+        elif re.search(matches, zhstr):
+            for i in range(len(idseg)):
+                for k, v in INDONESIAN_SUDAH_ERROR_WORDS.items():
+                    if idseg[i] == v and idseg[i - 1] != "sudah":
+                        idseg[i] = "  sudah " +  v 
+
+        
+        # location 菜品問題
+        if re.search(".*LOCATION.*[菜|食物]", zhstr): 
+            for i in range(len(idseg)):
+                if idseg[i] == "LOCATION" and idseg[i - 1] != "makanan":
+                    idseg[i] = "  makanan " + idseg[i]
+            pass
+        # 吃／喝 少譯問題
+        if re.search(".*吃FOOD", zhstr):
+            for i in range(len(idseg)):
+                if idseg[i] == "FOOD" and idseg[i - 1] != "makan":
+                    idseg[i] = "  makan " + idseg[i]
+        if re.search(".*喝", zhstr):
+            for i in range(len(idseg)):
+                for k, v in INDONESIAN_MINUM_UNDERCASE.items():
+                    if idseg[i] == v and idseg[i - 1] != "minum":
+                        idseg[i] = "  minum " +  v 
+        
+        # 副詞少譯情況
+        if re.search(".*很.*", zhstr):
+            for i in range(len(idseg)):
+                for k, v in INDONESIAN_MINUM_UNDERCASE.items():
+                    if idseg[i] == v and idseg[i - 1] != "sangat":
+                        idseg[i] = "  sangat " +  v 
+                    
+        return " ".join(idseg).replace("  ", "").strip().split()
+  
+    def correct_grammar_mistake(self, zhstr: str, idseg: list) -> list:
+        idstr = " ".join(idseg)
+        if re.search(".*好朋友.*", zhstr):
+            idstr = idstr.replace("temanku yang baik", "teman baikku")
+        
+        # 動詞片語錯誤
+        if "沒吃完" in zhstr:
+            idstr = idstr.replace("belum selesai makan", "tidak menghabiskan makannanya")
+            idstr = idstr.replace("tidak selesai makan", "tidak menghabiskan makannanya")
+            
+        if re.search("請[你|我|他|她]", zhstr):
+            idstr = idstr.replace("silakan", "tolong")
+            idstr = idstr.replace("silahkan", "tolong")
+        
+        if "煮甚麼" in zhstr or "煮什麼" in zhstr:
+            if "masak apa" not in idstr:
+                if "apa" in idstr:
+                    idstr = idstr.replace("apa", "").strip()
+                idstr = idstr.replace("masak", "masak apa")
+            if "TIME" in idstr:
+                idstr = "TIME " + idstr.replace("TIME", "").strip()
+                
+        if "陪伴" in zhstr:
+            if "bersama" in idstr:
+                idstr = idstr.replace("bersama", "dengan")
+                
+        if re.search("[我|你|您]幫[我|你|您]洗澡", zhstr):
+            idstr = idstr.replace("mandi untuk anda", "membantu anda mandi")
+            
+        return idstr.replace("  ", "").strip().split()    
+    
+    def correct_error_translation(self, zhstr: str, idseg: list) -> list:
+        idstr = " ".join(idseg)
+        
+        # 兄弟姊妹稱謂
+        if "姐姐" in zhstr or "姊姊" in zhstr or "哥哥" in zhstr:
+            if "adik" in idstr:
+                idstr = idstr.replace("adik", "kakak", 1) # replace first encounter
+        if "妹妹" in zhstr or "弟弟" in zhstr:
+            if "kakak" in idstr:
+                idstr = idstr.replace("kakak", "adik", 1) # replace first encounter
+            if "saudara perempuan" in idstr:
+                idstr = idstr.replace("saudara perempuan", "adik")
+        
+        if re.search("整理.*[床|沙發|衣服|地板|陽台|盆栽]", zhstr):
+            if "mengatur" in idstr:
+                idstr = idstr.replace("mengatur", "merapikan")
+
+        if "TIME" in zhstr or "DATE" in zhstr:
+            if "di pada" in idstr:
+                idstr = idstr.replace("di pada", "pada")
+        
+        # 等等
+        if "等等" in zhstr or "等一下" in zhstr or "等一等" in zhstr:
+            if "menunggu" in idstr:
+                idstr = idstr.replace("menunggu", "nanti akan", 1)
+            elif "tunggu" in idstr:
+                idstr = idstr.replace("tunggu", "nanti akan", 1)
+        
+        # 代名詞翻譯錯誤
+        if "你" in zhstr and "你們" not in zhstr:
+            idstr = idstr.replace("kalian", "kamu")
+            
+        if "不舒服" in zhstr and "這裡" not in zhstr:
+            idstr = idstr.replace("nyaman", "enak")
+            
+        if "神經痛" in zhstr:
+            if "linu" in idstr:
+                idstr = idstr.replace("linu", "sakit saraf")
+                
+        return idstr.replace("  ", "").strip().split() 
+    def correction_main(self, zhseg: list, idseg: list) -> str:
+        zhstr = "".join(zhseg)
+        idseg = super().correction_main(zhseg, idseg).split()
+        
+        idseg = self.correct_over_translation(zhstr, idseg)
+        idseg = self.correct_under_translation(zhstr, idseg)
+        idseg = self.correct_grammar_mistake(zhstr, idseg)
+        idseg = self.correct_error_translation(zhstr, idseg)
+        
+        return " ".join(idseg).replace("  ", "").strip()
+
+if __name__ == "__main__":
+    correct = IndoSyntaxPostCorrectionPlus()
+    zhseg = "神經 痛".split()
+    idseg = "linu".split()
+    # zhseg = "這橘子 很 甜".split()
+    # idseg = "jeruk itu manis".split()
+    # zhseg = "物理 治療師 TIME 評估 ， 奶奶 的 午餐 準備 了 嗎 ？".split()
+    # idseg = "ahli terapi fisik menilai TIME ini , apakah nenek siap makan siang ?".split()
+    # zhseg = "奶奶 的 飯 為什麼 沒 吃 完".split()
+    # idseg = "mengapa nenek belum selesai makan ?".split()
+    # zhseg = "TIME 煮 什麼".split()
+    # idseg = "masak TIME ini Apa".split()
+    # zhseg = "TIME 時 記得 去 LOCATION".split()
+    # idseg = "ingatlah untuk pergi ke LOCATION TIME ini".split()
+    # zhseg = "您 需要 我 幫 您 洗澡 嗎 ？".split()
+    # idseg = "apakah Anda membutuhkan saya untuk mandi untuk Anda ?".split()
     res = correct.correction_main(zhseg, idseg)
     print(res)
